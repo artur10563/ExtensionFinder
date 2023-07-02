@@ -8,6 +8,9 @@ namespace ExtensionFinder
     public static class FileHelper
     {
         private static char mirror_malware = '\u202e';
+        private static List<string> malware_extensions = new List<string>
+        {".src" , ".pif", ".docm", ".pptm", ".xlsm", ".cpl", ".crt", ".ins", ".isp" };
+
         public static List<string> GetFiles(string directory)
         {
             List<string> files = new List<string>();
@@ -25,7 +28,6 @@ namespace ExtensionFinder
 
             return files;
         }
-
         public static List<string> GetDirs(string directory)
         {
             List<string> dirs = new List<string>();
@@ -41,6 +43,25 @@ namespace ExtensionFinder
             return dirs;
         }
 
+        //Check if file has multiple extensions
+        private static bool MultipleExtensions(string file, out int count)
+        {
+            count = 0;
+            string extension;
+
+            do
+            {
+                extension = Path.GetExtension(file);
+                if (extension.Length != 0)
+                {
+                    count++;
+                    file = file.Remove(file.Length - extension.Length, extension.Length);
+                }
+            } while (!string.IsNullOrEmpty(extension));
+
+            return count > 1;
+        }
+
         //Main logic
         private static void ScanDirHelper(string directory,
             ref int scanedFiles, ref int scanedDirs, ref int foundFiles, ref int foundDirs)
@@ -54,9 +75,12 @@ namespace ExtensionFinder
 
                 List<string> files = GetFiles(dir);
 
-                //Check if folder contains any mirrored files or has keyword files
-                bool hasKeyWordFiles = files.Any(file => file.Contains(mirror_malware));
-
+                //Check if folder contains any mirrored files or has keyword files or >1 extension files
+                bool hasKeyWordFiles =
+                    files.Any(file => file.Contains(mirror_malware) ||
+                                      malware_extensions.Any(me => file.EndsWith(me)) ||
+                                      MultipleExtensions(file, out _)
+                                      );
 
                 if (hasKeyWordFiles)
                 {
@@ -66,15 +90,33 @@ namespace ExtensionFinder
 
                     foreach (string file in files)
                     {
+
                         scanedFiles++;
+
+                        bool contains_malware_extension = malware_extensions.Any(me => file.EndsWith(me));
 
                         if (file.Contains(mirror_malware))
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
                             foundFiles++;
-                            Console.WriteLine("\t" + file);
+                            Logger.CW("\t" + file, ConsoleColor.Red);
+                            Logger.Log(dir + @"\" + file, "u202e");
                         }
-                        Console.ResetColor();
+
+                        else if (contains_malware_extension)
+                        {
+                            foundFiles++;
+                            Logger.CW("\t" + file, ConsoleColor.Yellow);
+                            Logger.Log(file, "extension");
+                        }
+
+                        //High chance for false-positive results
+                        else if (MultipleExtensions(file, out int count))
+                        {
+                            foundFiles++;
+                            Logger.CW("\t" + file, ConsoleColor.DarkYellow);
+                            Logger.Log(file, "multiple extensions");
+
+                        }
 
                     }
                 }
@@ -99,7 +141,7 @@ namespace ExtensionFinder
 
             List<string> files = GetFiles(directory);
 
-            bool hasKeyWordFiles = files.Any(file => file.Contains(mirror_malware));
+            bool hasKeyWordFiles = files.Any(file => file.Contains(mirror_malware) || malware_extensions.Any(me => file.EndsWith(me)));
 
             if (hasKeyWordFiles)
             {
@@ -109,8 +151,8 @@ namespace ExtensionFinder
                 foreach (string file in files)
                 {
                     scanedFiles++;
-
-                    if (file.Contains(mirror_malware))
+                    bool contains_malware_extension = malware_extensions.Any(me => file.EndsWith(me));
+                    if (file.Contains(mirror_malware) || contains_malware_extension)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         foundFiles++;

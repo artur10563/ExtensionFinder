@@ -10,15 +10,54 @@ namespace ExtensionFinder
 {
     internal class Program
     {
+        private static string line = "--------------------------------------------------------------------------------------";
         private static void ShowHelp()
         {
+            Console.WriteLine("\n" + line);
             Console.WriteLine("Usage: ExtensionFinder [path]\n");
             Console.WriteLine("Arguments:");
             Console.WriteLine("  [path]  Path from which scan is started (e.g., C:/ , C:\\Folder1\\Folder2\\Folder3)");
+            Console.WriteLine(" --help   Show help");
+            Console.WriteLine(" --all    Scan all drives");
+            Console.WriteLine(line + "\n");
         }
+        private static void Scan(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                Console.WriteLine("\n" + line);
+                Console.WriteLine("Scan started from " + path);
+                Console.WriteLine("It might take some time!\n");
+                var start = DateTime.Now;
+
+                FileHelper.ScanDir(path);
+
+                Console.WriteLine("\nScan finished!");
+                #region elapsed time builder
+                var duration = DateTime.Now - start;
+                StringBuilder sb = new StringBuilder();
+                if (duration.Days > 0)
+                    sb.Append(duration.Days + "d");
+                if (duration.Hours > 0)
+                    sb.Append(duration.Hours + "h");
+                if (duration.Minutes > 0)
+                    sb.Append(duration.Minutes + "m");
+                if (duration.Seconds > 0)
+                    sb.Append(duration.Seconds + "s");
+                if (duration.Milliseconds > 0)
+                    sb.Append(duration.Milliseconds + "ms");
+                #endregion
+                Console.WriteLine("\nScan took " + sb.ToString());
+            }
+            else
+            {
+                Console.WriteLine("No such directory as " + path);
+            }
+        }
+
         static void Main(string[] args)
         {
-            ;
+
 
             //No args - Help
             if (args.Length == 0)
@@ -34,38 +73,23 @@ namespace ExtensionFinder
                 {
                     ShowHelp();
                 }
-                //Check if such path exists
-                else
+                else if (args[0] == "--all")
                 {
-                    string path = args[0];
-                    if (Directory.Exists(path))
+                    DriveInfo[] allDrives = DriveInfo.GetDrives();
+                    foreach (DriveInfo drive in allDrives)
                     {
-                        var start = DateTime.Now;
-                        Console.WriteLine("Scan started from " + path);
-                        Console.WriteLine("It might take some time!\n");
-
-                        FileHelper.ScanDir(path);
-
-                        Console.WriteLine("\nScan finished!");
-                        var duration = DateTime.Now - start;
-                        StringBuilder sb = new StringBuilder();
-                        //через стрінг білдер динамічно робити шоб добавляти тільки якшо більше нуля
-                        string formattedDuration = string.Format("{0}d{1}h{2}m{3}s{4}ms",
-                            duration.Days, duration.Hours, duration.Minutes, duration.Seconds, duration.Milliseconds);
-
-                        Console.WriteLine("\nScan took " + formattedDuration);
-
-
-                    }
-                    else
-                    {
-                        Console.WriteLine("No such directory as " + path);
+                        Scan(drive.Name);
                     }
                 }
-
-
+                //Scan by path
+                else
+                {
+                    Scan(args[0]);
+                }
             }
-
         }
+
+
+
     }
 }
