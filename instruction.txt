@@ -1,0 +1,2 @@
+cd ...\ExtensionFinder\bin\Debug
+ExtensionFinder --help
