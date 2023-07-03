@@ -57,8 +57,7 @@ namespace ExtensionFinder
 
         static void Main(string[] args)
         {
-
-
+            
             //No args - Help
             if (args.Length == 0)
             {

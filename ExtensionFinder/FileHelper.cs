@@ -10,6 +10,90 @@ namespace ExtensionFinder
         private static char mirror_malware = '\u202e';
         private static List<string> malware_extensions = new List<string>
         {".src" , ".pif", ".docm", ".pptm", ".xlsm", ".cpl", ".crt", ".ins", ".isp" };
+        private static List<string> commonExtensions = new List<string>
+{
+    // Text Documents
+    ".txt", ".doc", ".docx", ".rtf", ".odt", ".wpd",
+    
+    // Spreadsheets
+    ".xls", ".xlsx", ".csv", ".ods",
+    
+    // Presentations
+    ".ppt", ".pptx", ".pps", ".ppsx", ".odp",
+    
+    // PDF
+    ".pdf",
+    
+    // Images
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".svg", ".ico",
+    
+    // Audio
+    ".mp3", ".wav", ".wma", ".aac", ".flac", ".ogg",
+    
+    // Video
+    ".mp4", ".avi", ".mkv", ".wmv", ".mov", ".flv", ".m4v", ".mpeg", ".3gp", ".webm",
+    
+    // Compressed Archives
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz",
+    
+    // Programming Files
+    ".cpp", ".cs", ".java", ".py", ".rb", ".php", ".html", ".css", ".js", ".xml", ".json",
+    
+    // Executable Files
+    ".exe", ".dll", ".bat", ".com", ".app", ".msi",
+    
+    // Database Files
+    ".mdb", ".accdb", ".sql", ".db", ".dbf", ".sqlite", ".backup",
+    
+    // Fonts
+    ".ttf", ".otf", ".woff", ".woff2",
+    
+    // Configuration Files
+    ".ini", ".cfg", ".yaml", ".toml",
+    
+    // System Files
+    ".bak", ".tmp", ".log",
+    
+    // Documents
+    ".odt", ".ott", ".fodt", ".docm", ".dot", ".dotm", ".dotx",
+    
+    // Spreadsheets
+    ".ods", ".ots", ".fods", ".xlsm", ".xlt", ".xltm", ".xltx",
+    
+    // Presentations
+    ".odp", ".otp", ".fodp", ".pptm", ".pot", ".potm", ".potx",
+    
+    // Emails
+    ".eml", ".msg", ".pst", ".mbox",
+    
+    // Web Files
+    ".html", ".htm", ".php", ".css", ".js", ".asp", ".aspx", ".jsp", ".php", ".xhtml",
+    
+    // Certificates
+    ".crt", ".pem", ".pfx",
+    
+    // Virtual Machine Files
+    ".vmdk", ".vhd", ".vhdx", ".ova", ".ovf",
+    
+    // Backup Files
+    ".bak", ".zip", ".tar", ".gz", ".bz2", ".7z",
+    
+    // Configuration Files
+    ".ini", ".cfg", ".conf", ".yaml", ".xml",
+    
+    // Miscellaneous
+    ".dat", ".bin", ".log", ".cache", ".tmp", ".bak",
+    
+    // Additional Extensions (to reach 300)
+    ".src", ".pif", ".cpl", ".ins", ".isp", ".csv", ".dbf", ".dbx", ".eml", ".eps", ".fla", ".fnt",
+    ".hlp", ".ics", ".iso", ".lnk", ".lst", ".man", ".mht", ".mhtml", ".ods", ".oft", ".one", ".onetoc",
+    ".ott", ".p7c", ".p7m", ".p7s", ".pem", ".potm", ".prc", ".prf", ".pub", ".qbb", ".qbw", ".qbx", ".qby",
+    ".qdf", ".qdt", ".qed", ".qfx", ".qif", ".rft", ".shs", ".sig", ".sldm", ".sldx", ".sql", ".thmx",
+    ".tlb", ".udl", ".udt", ".vcs", ".vtx", ".wbk", ".wiz", ".xla", ".xlam", ".xlk", ".xll", ".xltm", ".xltx",
+    ".xnk", ".xps", ".xsd", ".xsl", ".xslt", ".xsn", ".xtp", ".xtps"
+};
+
+
 
         public static List<string> GetFiles(string directory)
         {
@@ -18,7 +102,6 @@ namespace ExtensionFinder
             {
                 foreach (string file in Directory.GetFiles(directory))
                 {
-
                     files.Add(file.Replace(directory + @"\", ""));
                 }
             }
@@ -43,7 +126,7 @@ namespace ExtensionFinder
             return dirs;
         }
 
-        //Check if file has multiple extensions
+        //Перевірка чи має декілька розширень, +-працює
         private static bool MultipleExtensions(string file, out int count)
         {
             count = 0;
@@ -51,11 +134,15 @@ namespace ExtensionFinder
 
             do
             {
-                extension = Path.GetExtension(file);
-                if (extension.Length != 0)
+                extension = Path.GetExtension(file).ToLower();
+                if (extension.Length != 0 && commonExtensions.Contains(extension))
                 {
                     count++;
                     file = file.Remove(file.Length - extension.Length, extension.Length);
+                }
+                else
+                {
+                    break;
                 }
             } while (!string.IsNullOrEmpty(extension));
 
@@ -63,17 +150,32 @@ namespace ExtensionFinder
         }
 
         //Main logic
-        private static void ScanDirHelper(string directory,
-            ref int scanedFiles, ref int scanedDirs, ref int foundFiles, ref int foundDirs)
-        {
+        private static bool addInitKostil = true;
+        private static int scanedFiles = 0;
+        private static int scanedDirs = 0;
 
+        private static int foundFiles = 0;
+        private static int foundDirs = 0;
+
+        private static HashSet<string> processedDirs = new HashSet<string>();
+        private static void ScanDirHelper(string directory)
+        {
             List<string> dirs = GetDirs(directory);
+            if (addInitKostil)
+            {
+                addInitKostil = false;
+                dirs.Insert(0, directory);
+            }
+
+            scanedDirs += dirs.Count;
 
             foreach (string dir in dirs)
             {
-                scanedDirs++;
+                if (processedDirs.Contains(dir)) continue;
+                processedDirs.Add(dir);
 
                 List<string> files = GetFiles(dir);
+                scanedFiles += files.Count;
 
                 //Check if folder contains any mirrored files or has keyword files or >1 extension files
                 bool hasKeyWordFiles =
@@ -82,16 +184,14 @@ namespace ExtensionFinder
                                       MultipleExtensions(file, out _)
                                       );
 
+                //If directory contains suspicious files
                 if (hasKeyWordFiles)
                 {
-
                     foundDirs++;
                     Console.Write("\n" + dir + "\n");
 
                     foreach (string file in files)
                     {
-
-                        scanedFiles++;
 
                         bool contains_malware_extension = malware_extensions.Any(me => file.EndsWith(me));
 
@@ -106,7 +206,7 @@ namespace ExtensionFinder
                         {
                             foundFiles++;
                             Logger.CW("\t" + file, ConsoleColor.Yellow);
-                            Logger.Log(file, "extension");
+                            Logger.Log(dir + @"\" + file, "extension");
                         }
 
                         //High chance for false-positive results
@@ -114,15 +214,16 @@ namespace ExtensionFinder
                         {
                             foundFiles++;
                             Logger.CW("\t" + file, ConsoleColor.DarkYellow);
-                            Logger.Log(file, "multiple extensions");
+                            Logger.Log(dir + @"\" + file, "multiple extensions");
 
                         }
 
                     }
                 }
 
+                //If directory has directory inside, scan it
                 if (GetDirs(dir).Count > 0)
-                    ScanDirHelper(dir, ref scanedFiles, ref scanedDirs, ref foundFiles, ref foundDirs);
+                    ScanDirHelper(dir);
             }
 
         }
@@ -131,45 +232,13 @@ namespace ExtensionFinder
         {
             if (!Directory.Exists(directory)) return;
 
-            int scanedFiles = 0;
-            int scanedDirs = 0;
-
-            int foundFiles = 0;
-            int foundDirs = 0;
-
-            scanedDirs++;
-
-            List<string> files = GetFiles(directory);
-
-            bool hasKeyWordFiles = files.Any(file => file.Contains(mirror_malware) || malware_extensions.Any(me => file.EndsWith(me)));
-
-            if (hasKeyWordFiles)
-            {
-                foundDirs++;
-                Console.Write("\n" + directory + "\n");
-
-                foreach (string file in files)
-                {
-                    scanedFiles++;
-                    bool contains_malware_extension = malware_extensions.Any(me => file.EndsWith(me));
-                    if (file.Contains(mirror_malware) || contains_malware_extension)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        foundFiles++;
-                        Console.WriteLine("\t" + file);
-                    }
-                    Console.ResetColor();
-                }
-            }
-
-
-            //Scan all other folders
-            ScanDirHelper(directory, ref scanedFiles, ref scanedDirs, ref foundFiles, ref foundDirs);
+            ScanDirHelper(directory);
             Console.Write(
-             "\n\nScaned dirs : " + scanedDirs +
-               "\nScaned files: " + scanedFiles +
-               "\n\nDirs with malware files : " + foundDirs +
-               "\nMalware files: " + foundFiles);
+    "\n\nScanned dirs: " + scanedDirs.ToString("N0") +
+    "\nScanned files: " + scanedFiles.ToString("N0") +
+    "\n\nDirs with malware files: " + foundDirs.ToString("N0") +
+    "\nMalware files: " + foundFiles.ToString("N0"));
+
 
 
         }
